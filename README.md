@@ -1,1 +1,1 @@
-# Introduction-to-Computer-Vision_Equalization
+# Introduction-to-Computer-Vision
