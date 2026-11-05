@@ -1,3 +1,3 @@
-# Introduction-to-Computer-Vision_Equalization
+# Introduction-to-Computer-Vision
 
 Run with: python Assignments/<assignment_name>.py
