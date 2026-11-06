@@ -1,5 +1,3 @@
-import io
-import base64
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +6,11 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
 
 # Paths
 DATA_DIR = Path(__file__).resolve().parent.parent / "cifar-10" / "cifar-10-python" / "cifar-10-batches-py"
-OUT_FILE = Path(__file__).resolve().parent.with_name(Path(__file__).stem + "_results.md")
+SCRIPT = Path(__file__).resolve()
+ROOT = SCRIPT.parent.parent
+OUT_FILE = ROOT / (SCRIPT.stem + "_results.md")
+IMG_DIR = ROOT / (SCRIPT.stem + "_results_plots")
+IMG_DIR.mkdir(exist_ok=True)
 
 if not DATA_DIR.is_dir():
     raise FileNotFoundError(f"Could not find data directory: {DATA_DIR}")
@@ -92,7 +94,7 @@ cv_results = {}
 test_results = {}
 
 for metric in METRICS:
-    print("Running %s ..." % metric)   # progress message (can be deleted)
+    print("Running %s ..." % metric)
     fold_accs = cross_validation(X_train, y_train, K_VALUES, metric)
     cv_results[metric] = fold_accs
 
@@ -124,12 +126,10 @@ def md_table(header, rows, bold_rows=()):
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
-# Add figure as PNG directly in the markdown file
-def add_figure(fig, alt):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
-    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-    md.append("![%s](data:image/png;base64,%s)\n" % (alt, b64))
+# Add figure as a PNG in IMG_DIR and link it to the markdown file
+def add_figure(fig, filename, alt):
+    fig.savefig(IMG_DIR / filename, dpi=150, bbox_inches="tight")
+    md.append("![%s](%s/%s)\n" % (alt, IMG_DIR.name, filename))
     plt.close(fig)
 
 md.append("# KNN on CIFAR-10 - Results\n")
@@ -191,7 +191,7 @@ axes[0].set_ylabel("Cross-validation accuracy")
 plt.tight_layout()
 md.append("### Cross-validation on k\n\nEach dot is one fold, the line goes through the "
           "mean, the bars show the standard deviation.\n")
-add_figure(fig, "Cross-validation on k")
+add_figure(fig, "cv_on_k.png", "Cross-validation on k")
 
 # 1b L1 vs L2
 fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -208,7 +208,7 @@ ax.grid(alpha=0.3)
 ax.legend()
 plt.tight_layout()
 md.append("### L1 vs L2\n")
-add_figure(fig, "L1 vs L2")
+add_figure(fig, "cv_l1_vs_l2.png", "L1 vs L2")
 
 # 2 Confusion matrices (counts + row-normalised)
 md.append("### Confusion matrices\n")
@@ -236,7 +236,7 @@ for metric in METRICS:
     fig.suptitle("Confusion matrix - KNN (k=%d, %s)" % (bk, metric))
     plt.tight_layout()
     md.append("**%s (k=%d)**\n" % (metric, bk))
-    add_figure(fig, "Confusion matrix %s" % metric)
+    add_figure(fig, "confusion_matrix_%s.png" % metric, "Confusion matrix %s" % metric)
 
 # 3 Per-class precision / recall / F1
 fig, axes = plt.subplots(1, len(METRICS), figsize=(14, 4.5), sharey=True)
@@ -255,7 +255,7 @@ axes[0].set_ylabel("Score")
 axes[0].legend()
 plt.tight_layout()
 md.append("### Per-class scores\n")
-add_figure(fig, "Per-class scores")
+add_figure(fig, "per_class_scores.png", "Per-class scores")
 
 # 4 Overall test metrics, L1 vs L2
 fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -275,7 +275,7 @@ ax.grid(axis="y", alpha=0.3)
 ax.legend()
 plt.tight_layout()
 md.append("### Test-set metrics, L1 vs L2\n")
-add_figure(fig, "Test-set metrics")
+add_figure(fig, "test_metrics_comparison.png", "Test-set metrics")
 
 # Write the output markdown file
 with open(OUT_FILE, "w", encoding="utf-8") as f:
